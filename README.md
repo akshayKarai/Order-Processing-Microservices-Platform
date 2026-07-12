@@ -204,7 +204,7 @@ When running a service locally instead of in Docker, its `application.yml` alrea
 
 ---
 
-## 9. Design notes and tradeoffs (worth knowing if asked in an interview)
+## 9. Design notes and tradeoffs
 
 - **Database-per-service, single container for cost reasons.** All three databases live in one Postgres container locally (`init-db/init-databases.sql` creates them), but each service connects only to its own database and never queries another's tables. In a cloud deployment, these would typically be three separate managed instances, the logical separation is what matters, not the physical container count.
 - **Eventual consistency, not distributed transactions.** Order status is `PENDING` immediately after creation and updates asynchronously once Inventory processes the event. This avoids a distributed transaction across two services' databases, at the cost of a brief window where the order isn't yet confirmed. This is the standard tradeoff event-driven systems make (sometimes addressed with the Saga pattern for more complex multi-step workflows).
