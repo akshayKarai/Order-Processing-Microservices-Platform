@@ -1,14 +1,14 @@
 # Order Processing Microservices Platform
 
-A locally runnable, event-driven microservices platform built with **Spring Boot**, **Apache Kafka**, **PostgreSQL**, and a **React** frontend, with **Prometheus + Grafana** observability. Everything runs on your machine via Docker Compose at **zero cost** — no cloud account, no billing, no deployment required.
+A locally runnable, event-driven microservices platform built with **Spring Boot**, **Apache Kafka**, **PostgreSQL**, and a **React** frontend, with **Prometheus + Grafana** observability. Everything runs on your machine via Docker Compose at **zero cost**, no cloud account, no billing, no deployment required.
 
-This project demonstrates: independent microservices with database-per-service, asynchronous event-driven communication, resilience patterns, and basic observability — the core concepts behind production distributed systems, scoped down to something you can run on a laptop.
+This project demonstrates: independent microservices with database-per-service, asynchronous event-driven communication, resilience patterns, and basic observability, the core concepts behind production distributed systems, scoped down to something you can run on a laptop.
 
 ---
 
 ## 1. What this project does
 
-A customer places an order through a React UI. The request flows through an API gateway to an Order Service, which saves the order and publishes an event to Kafka. Two independent services — Inventory and Notification — consume that event in parallel: Inventory checks and decrements stock (confirming or rejecting the order), and Notification simulates sending a confirmation message. The order's status updates asynchronously, and the UI reflects it within a couple of seconds via polling.
+A customer places an order through a React UI. The request flows through an API gateway to an Order Service, which saves the order and publishes an event to Kafka. Two independent services, Inventory and Notification, consume that event in parallel: Inventory checks and decrements stock (confirming or rejecting the order), and Notification simulates sending a confirmation message. The order's status updates asynchronously, and the UI reflects it within a couple of seconds via polling.
 
 ---
 
@@ -84,7 +84,7 @@ sequenceDiagram
     end
 ```
 
-**Why this matters for the design:** Inventory and Notification consume the *same* event independently — one being slow or down does not block the other, and Order Service never calls either of them directly. This is what makes the system loosely coupled and resilient rather than a disguised monolith.
+**Why this matters for the design:** Inventory and Notification consume the *same* event independently, one being slow or down does not block the other, and Order Service never calls either of them directly. This is what makes the system loosely coupled and resilient rather than a disguised monolith.
 
 ---
 
@@ -92,7 +92,7 @@ sequenceDiagram
 
 | Component | Technology | Role |
 |---|---|---|
-| **React UI** | React 18, Vite, Axios | Order form, live order list, inventory view, notification feed. Polls the gateway every 2s. Not a production frontend — kept intentionally thin so review focus stays on the backend. |
+| **React UI** | React 18, Vite, Axios | Order form, live order list, inventory view, notification feed. Polls the gateway every 2s. Not a production frontend, kept intentionally thin so review focus stays on the backend. |
 | **API Gateway** | Spring Cloud Gateway | Single entry point on port 8080. Routes `/api/orders/**`, `/api/inventory/**`, `/api/notifications/**` to the respective service and handles CORS centrally. |
 | **Order Service** | Spring Boot, Spring Data JPA, Spring Kafka | Owns order lifecycle. Validates requests, persists orders, publishes `order-created`, consumes `order-status-updated` to update order state. |
 | **Inventory Service** | Spring Boot, Spring Data JPA, Spring Kafka | Owns product stock. Consumes `order-created`, decrements stock with optimistic locking, publishes `order-status-updated` (CONFIRMED or REJECTED). |
@@ -128,14 +128,14 @@ microservices-order-platform/
 
 ## 6. Prerequisites
 
-- **Docker Desktop** (or Docker Engine + Docker Compose) — this is the only hard requirement to run everything with one command
+- **Docker Desktop** (or Docker Engine + Docker Compose), this is the only hard requirement to run everything with one command
 - Optional, only if you want to run a service outside Docker for development: **Java 17**, **Maven 3.9+**, **Node.js 20+**
 
 No cloud account, no API keys, no paid services anywhere in this stack.
 
 ---
 
-## 7. Local setup — run everything with one command
+## 7. Local setup, run everything with one command
 
 ```bash
 git clone <your-fork-url>
@@ -200,17 +200,17 @@ npm install
 npm run dev
 ```
 
-When running a service locally instead of in Docker, its `application.yml` already defaults `DB_HOST` and `KAFKA_BROKER` to `localhost`, so no config changes are needed as long as the Postgres/Kafka ports (5432, 9092) are exposed to your host — which they are in `docker-compose.yml`.
+When running a service locally instead of in Docker, its `application.yml` already defaults `DB_HOST` and `KAFKA_BROKER` to `localhost`, so no config changes are needed as long as the Postgres/Kafka ports (5432, 9092) are exposed to your host, which they are in `docker-compose.yml`.
 
 ---
 
 ## 9. Design notes and tradeoffs (worth knowing if asked in an interview)
 
-- **Database-per-service, single container for cost reasons.** All three databases live in one Postgres container locally (`init-db/init-databases.sql` creates them), but each service connects only to its own database and never queries another's tables. In a cloud deployment, these would typically be three separate managed instances — the logical separation is what matters, not the physical container count.
+- **Database-per-service, single container for cost reasons.** All three databases live in one Postgres container locally (`init-db/init-databases.sql` creates them), but each service connects only to its own database and never queries another's tables. In a cloud deployment, these would typically be three separate managed instances, the logical separation is what matters, not the physical container count.
 - **Eventual consistency, not distributed transactions.** Order status is `PENDING` immediately after creation and updates asynchronously once Inventory processes the event. This avoids a distributed transaction across two services' databases, at the cost of a brief window where the order isn't yet confirmed. This is the standard tradeoff event-driven systems make (sometimes addressed with the Saga pattern for more complex multi-step workflows).
-- **At-least-once delivery and idempotency.** Kafka can redeliver messages. Notification Service explicitly checks whether it has already recorded a notification for a given order ID before sending another — without this, a redelivered message would cause a duplicate notification.
+- **At-least-once delivery and idempotency.** Kafka can redeliver messages. Notification Service explicitly checks whether it has already recorded a notification for a given order ID before sending another, without this, a redelivered message would cause a duplicate notification.
 - **Optimistic locking on stock.** `Product` uses `@Version` so concurrent stock decrements under load fail fast and retry, rather than silently overwriting each other's updates.
-- **Resilience4j is wired into Order Service** for synchronous calls to other services (circuit breaker + retry config in `application.yml`). The current flow is fully event-driven and doesn't require a synchronous call, so this is included to demonstrate the pattern — it's exercised if you extend Order Service to call Inventory Service directly for a real-time stock check before accepting an order.
+- **Resilience4j is wired into Order Service** for synchronous calls to other services (circuit breaker + retry config in `application.yml`). The current flow is fully event-driven and doesn't require a synchronous call, so this is included to demonstrate the pattern, it's exercised if you extend Order Service to call Inventory Service directly for a real-time stock check before accepting an order.
 - **React UI is intentionally thin.** It exists to demonstrate the distributed flow visually (place an order, watch inventory drop and a notification appear), not as a frontend engineering showcase.
 
 ---
@@ -227,4 +227,4 @@ When running a service locally instead of in Docker, its `application.yml` alrea
 
 ## 11. License
 
-MIT — use freely for learning.
+MIT, use freely for learning.
