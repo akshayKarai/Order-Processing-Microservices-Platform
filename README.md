@@ -47,7 +47,7 @@ flowchart TB
 
 ---
 
-## 3. End-to-end request flow
+## 3. End-to-end request flow for the project
 
 ```mermaid
 sequenceDiagram
