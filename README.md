@@ -41,6 +41,7 @@ flowchart TB
 ```
 
 **Key design points:**
+
 - Each service is an independently deployable Spring Boot application with its own database. No service ever queries another service's tables directly.
 - Order Service is the only synchronous entry point for writes; Inventory and Notification react to events asynchronously.
 - The gateway is the single entry point for the frontend, so the UI never needs to know individual service ports.
